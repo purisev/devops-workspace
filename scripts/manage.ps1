@@ -211,6 +211,7 @@ function Invoke-Update {
     $memoryLimit   = Get-Label $container "devtools.memory"
     $cpuLimit      = Get-Label $container "devtools.cpus"
     $volume        = Get-Label $container "devtools.volume"
+    if (-not $volume) { $volume = "$Name-private" }
 
     # Re-derive paths
     $sharedDir      = Join-Path $workspacesDir $Name
