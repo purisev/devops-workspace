@@ -259,7 +259,7 @@ RUN echo "Setting up Python venv autoactivation" && \
     echo '\n# Set up autocompletion\nif [ -f /etc/bash_completion ] && ! shopt -oq posix; then\n    . /etc/bash_completion\nfi' >> /etc/bash.bashrc && \
     echo '\n# AWS CLI autocompletion\ncomplete -C "/usr/bin/aws_completer" aws' >> /etc/bash.bashrc && \
     echo "Setting up Terraform autocompletion" && \
-    echo '\n# Terraform autocomplete\nif [ -x "$(command -v terraform)" ] && [ ! -f ~/.terraform.rc ]; then\n    terraform -install-autocomplete\nfi' >> /etc/bash.bashrc
+    terraform -install-autocomplete || true
 
 # Configure user and SSH
 RUN echo "Creating devuser with sudo privileges" && \

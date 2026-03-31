@@ -150,7 +150,7 @@ CPU_LIMIT="$(read_input "CPU limit   (e.g. 2   — leave empty for no limit)" "$
 
 # --- Derived paths -----------------------------------------------------------
 
-CONTAINER_NAME="${NAME}-cli"
+CONTAINER_NAME="${NAME}"
 SHARED_DIR="${WORKSPACES_DIR}/${NAME}"
 USER_ROOTS_DIR="${WORKSPACES_DIR}/user-roots"
 USER_DIR="${USER_ROOTS_DIR}/${NAME}"

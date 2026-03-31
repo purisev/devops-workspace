@@ -67,7 +67,7 @@ The script will ask for:
 ./scripts/manage.sh exec <name>
 
 # Or directly
-docker exec -it <name>-cli bash
+docker exec -it <name> bash
 ```
 
 ## Workspace Structure

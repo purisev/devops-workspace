@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 # =============================================================================
 # DevTools Container Launch Script — Windows (PowerShell)
 # Usage: Right-click → "Run with PowerShell", or: .\launch.ps1
@@ -50,7 +50,7 @@ function New-FileIfMissing {
     param([string]$Path, [string]$Label, [string]$Content = "")
     if (Test-Path -Path $Path -PathType Leaf) { Write-Skip "$Label`: $Path" }
     else {
-        [System.IO.File]::WriteAllText($Path, $Content, [System.Text.Encoding]::UTF8)
+        [System.IO.File]::WriteAllText($Path, $Content, [System.Text.UTF8Encoding]::new($false))
         Write-Ok "Created $Label`: $Path"
     }
 }
@@ -136,7 +136,7 @@ $CpuLimit      = Read-Input -Prompt "CPU limit   (e.g. 2   — leave empty for n
 
 # --- Derived paths -----------------------------------------------------------
 
-$ContainerName    = "${Name}-cli"
+$ContainerName    = $Name
 $SharedDir        = Join-Path $WorkspacesDir $Name
 $UserRootsDir     = Join-Path $WorkspacesDir "user-roots"
 $UserDir          = Join-Path $UserRootsDir  $Name

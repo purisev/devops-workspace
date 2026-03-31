@@ -44,7 +44,7 @@ require_name() {
 
 require_container() {
     local name="$1"
-    local container="${name}-cli"
+    local container="${name}"
     if ! docker inspect "${container}" &>/dev/null; then
         err "Container '${container}' not found."
         echo -e "  ${DIM}Run 'manage.sh list' to see all containers.${NC}"
@@ -107,7 +107,7 @@ cmd_list() {
 
 cmd_status() {
     local name="$1"
-    local container="${name}-cli"
+    local container="${name}"
     require_container "${name}"
 
     local raw_status image memory cpus workspaces_dir ssh_dir volume created
@@ -142,7 +142,7 @@ cmd_status() {
 
 cmd_start() {
     local name="$1"
-    local container="${name}-cli"
+    local container="${name}"
     require_container "${name}"
     step "Starting '${container}'..."
     docker start "${container}" > /dev/null
@@ -151,7 +151,7 @@ cmd_start() {
 
 cmd_stop() {
     local name="$1"
-    local container="${name}-cli"
+    local container="${name}"
     require_container "${name}"
     step "Stopping '${container}'..."
     docker stop "${container}" > /dev/null
@@ -160,7 +160,7 @@ cmd_stop() {
 
 cmd_restart() {
     local name="$1"
-    local container="${name}-cli"
+    local container="${name}"
     require_container "${name}"
     step "Restarting '${container}'..."
     docker restart "${container}" > /dev/null
@@ -169,7 +169,7 @@ cmd_restart() {
 
 cmd_remove() {
     local name="$1"
-    local container="${name}-cli"
+    local container="${name}"
     require_container "${name}"
 
     warn "This will remove container '${container}'. Workspace files are kept."
@@ -201,7 +201,7 @@ cmd_remove() {
 
 cmd_update() {
     local name="$1"
-    local container="${name}-cli"
+    local container="${name}"
     require_container "${name}"
 
     # Read stored config from container labels
@@ -266,14 +266,14 @@ cmd_update() {
 
 cmd_logs() {
     local name="$1"
-    local container="${name}-cli"
+    local container="${name}"
     require_container "${name}"
     docker logs -f "${container}"
 }
 
 cmd_exec() {
     local name="$1"
-    local container="${name}-cli"
+    local container="${name}"
     require_container "${name}"
     step "Connecting to '${container}'..."
     docker exec -it "${container}" bash

@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 # =============================================================================
 # DevTools Container Management Script — Windows (PowerShell)
 # Usage: .\manage.ps1 <command> [name]
@@ -28,8 +28,10 @@ function Write-Err  { Write-Host "  [ERR] $args" -ForegroundColor Red }
 
 function Get-Label {
     param([string]$Container, [string]$Key)
-    $result = docker inspect --format "{{index .Config.Labels `"$Key`"}}" $Container 2>$null
-    return $result
+    $json = docker inspect --format '{{json .Config.Labels}}' $Container 2>$null
+    if ($LASTEXITCODE -ne 0) { return "" }
+    $labels = $json | ConvertFrom-Json
+    return ($labels.PSObject.Properties | Where-Object Name -eq $Key).Value
 }
 
 function Get-ContainerStatus {
@@ -47,7 +49,7 @@ function Assert-Name {
 
 function Assert-Container {
     param([string]$Name)
-    $container = "${Name}-cli"
+    $container = $Name
     $exists = docker inspect $container 2>$null
     if ($LASTEXITCODE -ne 0) {
         Write-Err "Container '$container' not found."
@@ -100,7 +102,7 @@ function Invoke-List {
 
 function Invoke-Status {
     param([string]$Name)
-    $container = "${Name}-cli"
+    $container = $Name
     Assert-Container $Name
 
     $status        = Get-ContainerStatus $container
@@ -140,7 +142,7 @@ function Invoke-Status {
 
 function Invoke-Start {
     param([string]$Name)
-    $container = "${Name}-cli"
+    $container = $Name
     Assert-Container $Name
     Write-Step "Starting '$container'..."
     docker start $container | Out-Null
@@ -149,7 +151,7 @@ function Invoke-Start {
 
 function Invoke-Stop {
     param([string]$Name)
-    $container = "${Name}-cli"
+    $container = $Name
     Assert-Container $Name
     Write-Step "Stopping '$container'..."
     docker stop $container | Out-Null
@@ -158,7 +160,7 @@ function Invoke-Stop {
 
 function Invoke-Restart {
     param([string]$Name)
-    $container = "${Name}-cli"
+    $container = $Name
     Assert-Container $Name
     Write-Step "Restarting '$container'..."
     docker restart $container | Out-Null
@@ -167,7 +169,7 @@ function Invoke-Restart {
 
 function Invoke-Remove {
     param([string]$Name)
-    $container = "${Name}-cli"
+    $container = $Name
     Assert-Container $Name
 
     Write-Warn "This will remove container '$container'. Workspace files are kept."
@@ -199,7 +201,7 @@ function Invoke-Remove {
 
 function Invoke-Update {
     param([string]$Name)
-    $container = "${Name}-cli"
+    $container = $Name
     Assert-Container $Name
 
     # Read stored config from container labels
@@ -269,14 +271,14 @@ function Invoke-Update {
 
 function Invoke-Logs {
     param([string]$Name)
-    $container = "${Name}-cli"
+    $container = $Name
     Assert-Container $Name
     docker logs -f $container
 }
 
 function Invoke-Exec {
     param([string]$Name)
-    $container = "${Name}-cli"
+    $container = $Name
     Assert-Container $Name
     Write-Step "Connecting to '$container'..."
     docker exec -it $container bash
