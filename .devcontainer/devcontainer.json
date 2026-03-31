@@ -1,0 +1,32 @@
+{
+  // Repo-level devcontainer: for editing Dockerfile and scripts.
+  // Uses the published image by default; to use a local build run:
+  //   docker build -t purisev/devops-workspace:local .
+  // and change "image" below to "purisev/devops-workspace:local".
+  "name": "devops-workspace project",
+  "image": "purisev/devops-workspace:latest",
+
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace/project,type=bind",
+  "workspaceFolder": "/workspace/project",
+
+  "remoteUser": "root",
+
+  // Do not stop the container when VS Code closes.
+  "shutdownAction": "none",
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-azuretools.vscode-docker",
+        "timonwong.shellcheck",
+        "foxundermoon.shell-format",
+        "redhat.vscode-yaml",
+        "davidanson.vscode-markdownlint"
+      ],
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "files.eol": "\n"
+      }
+    }
+  }
+}

@@ -1,0 +1,22 @@
+# Environment files — may contain secrets
+*.env
+!*.env.example
+
+# Vault tokens
+.vault
+**/.vault
+
+# Per-user shell customizations
+**/.bashrc_custom
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+desktop.ini
+
+# Editor directories
+.idea/
+*.swp
+*.swo
