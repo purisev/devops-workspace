@@ -7,13 +7,21 @@
 set -euo pipefail
 
 # --- Colors ------------------------------------------------------------------
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-CYAN='\033[0;36m'
-BOLD='\033[1m'
-DIM='\033[2m'
-NC='\033[0m'
+# Colours are enabled only when stdout is a real terminal and the user has not
+# opted out (NO_COLOR, TERM=dumb). $'...' stores the *real* escape bytes, so a
+# plain `echo` / `printf '%s'` renders them: no `echo -e`, no `%b`, and never a
+# colour variable inside a printf format string.
+if [[ -t 1 && -z "${NO_COLOR:-}" && "${TERM:-dumb}" != "dumb" ]]; then
+    RED=$'\033[0;31m'
+    GREEN=$'\033[0;32m'
+    YELLOW=$'\033[1;33m'
+    CYAN=$'\033[0;36m'
+    BOLD=$'\033[1m'
+    DIM=$'\033[2m'
+    NC=$'\033[0m'
+else
+    RED='' GREEN='' YELLOW='' CYAN='' BOLD='' DIM='' NC=''
+fi
 
 # --- Platform detection ------------------------------------------------------
 OS="$(uname -s)"
@@ -21,7 +29,7 @@ case "${OS}" in
     Linux*)  PLATFORM="linux"  ;;
     Darwin*) PLATFORM="macos"  ;;
     *)
-        echo -e "${RED}Unsupported platform: ${OS}${NC}"
+        echo "${RED}Unsupported platform: ${OS}${NC}"
         exit 1
         ;;
 esac
@@ -42,10 +50,10 @@ fi
 
 print_header() {
     echo ""
-    echo -e "${BOLD}${CYAN}╔══════════════════════════════════════════════╗${NC}"
-    echo -e "${BOLD}${CYAN}║      DevTools Container Setup Script         ║${NC}"
-    printf "${BOLD}${CYAN}║      Platform: %-30s║${NC}\n" "${PLATFORM}"
-    echo -e "${BOLD}${CYAN}╚══════════════════════════════════════════════╝${NC}"
+    echo "${BOLD}${CYAN}╔══════════════════════════════════════════════╗${NC}"
+    echo "${BOLD}${CYAN}║      DevTools Container Setup Script         ║${NC}"
+    printf '%s║      Platform: %-30s║%s\n' "${BOLD}${CYAN}" "${PLATFORM}" "${NC}"
+    echo "${BOLD}${CYAN}╚══════════════════════════════════════════════╝${NC}"
     echo ""
 }
 
@@ -55,19 +63,19 @@ read_input() {
     local result
 
     if [[ -n "${default}" ]]; then
-        echo -ne "  ${YELLOW}${prompt_text}${NC} ${DIM}[${default}]${NC}: "
+        printf '%s' "  ${YELLOW}${prompt_text}${NC} ${DIM}[${default}]${NC}: " >&2
     else
-        echo -ne "  ${YELLOW}${prompt_text}${NC}: "
+        printf '%s' "  ${YELLOW}${prompt_text}${NC}: " >&2
     fi
     read -r result
     echo "${result:-${default}}"
 }
 
-ok()   { echo -e "  ${GREEN}✓${NC} $*"; }
-step() { echo -e "  ${CYAN}→${NC} $*"; }
-warn() { echo -e "  ${YELLOW}⚠${NC} $*"; }
-err()  { echo -e "  ${RED}✗${NC} $*"; }
-skip() { echo -e "  ${DIM}⊘ $* (already exists)${NC}"; }
+ok()   { echo "  ${GREEN}✓${NC} $*"; }
+step() { echo "  ${CYAN}→${NC} $*"; }
+warn() { echo "  ${YELLOW}⚠${NC} $*"; }
+err()  { echo "  ${RED}✗${NC} $*" >&2; }
+skip() { echo "  ${DIM}⊘ $* (already exists)${NC}"; }
 
 create_dir() {
     local path="$1" label="$2"
@@ -84,7 +92,7 @@ create_file() {
 # --- Prerequisites -----------------------------------------------------------
 
 if ! command -v docker &>/dev/null; then
-    echo -e "${RED}Docker is not installed or not in PATH. Aborting.${NC}"
+    echo "${RED}Docker is not installed or not in PATH. Aborting.${NC}"
     exit 1
 fi
 
@@ -92,8 +100,8 @@ fi
 
 print_header
 
-echo -e "${BOLD}  Input${NC}"
-echo -e "  ${DIM}────────────────────────────────────────────────${NC}"
+echo "${BOLD}  Input${NC}"
+echo "  ${DIM}────────────────────────────────────────────────${NC}"
 echo ""
 
 NAME=""
@@ -113,11 +121,11 @@ SSH_DIR="$(read_input "SSH keys directory" "${DEFAULT_SSH_DIR}")"
 # --- Image selection ---------------------------------------------------------
 
 echo ""
-echo -e "  ${BOLD}Docker image${NC}"
-echo -e "  ${DIM}  1) Pull from Docker Hub  — ${DEFAULT_IMAGE}${NC}"
-echo -e "  ${DIM}  2) Build locally now     — purisev/devops-workspace:local${NC}"
-echo -e "  ${DIM}  3) Enter custom image name${NC}"
-echo -ne "  ${YELLOW}Choice${NC} ${DIM}[1]${NC}: "
+echo "  ${BOLD}Docker image${NC}"
+echo "  ${DIM}  1) Pull from Docker Hub  — ${DEFAULT_IMAGE}${NC}"
+echo "  ${DIM}  2) Build locally now     — purisev/devops-workspace:local${NC}"
+echo "  ${DIM}  3) Enter custom image name${NC}"
+printf '%s' "  ${YELLOW}Choice${NC} ${DIM}[1]${NC}: "
 read -r _img_choice
 _img_choice="${_img_choice:-1}"
 
@@ -164,7 +172,7 @@ BASHRC_COMMON_FILE="${USER_ROOTS_DIR}/.bashrc_common"
 if [[ ! -d "${SSH_DIR}" ]]; then
     echo ""
     warn "SSH directory not found: ${SSH_DIR}"
-    echo -ne "  Continue anyway? [y/N]: "
+    printf '%s' "  Continue anyway? [y/N]: "
     read -r _c
     [[ ! "${_c}" =~ ^[Yy]$ ]] && { err "Aborted."; exit 1; }
 fi
@@ -172,8 +180,8 @@ fi
 # --- Create workspace structure ----------------------------------------------
 
 echo ""
-echo -e "${BOLD}  Creating workspace structure${NC}"
-echo -e "  ${DIM}────────────────────────────────────────────────${NC}"
+echo "${BOLD}  Creating workspace structure${NC}"
+echo "  ${DIM}────────────────────────────────────────────────${NC}"
 
 create_dir  "${SHARED_DIR}"  "Shared workspace"
 create_dir  "${USER_DIR}"    "User config dir"
@@ -194,12 +202,12 @@ TZ=UTC
 
 create_file "${GITCONFIG_FILE}" ".gitconfig" \
 "[user]
-	name = Your Name
-	email = your@email.com
+        name = Your Name
+        email = your@email.com
 
 [core]
-	autocrlf = input
-	editor = vim"
+        autocrlf = input
+        editor = vim"
 
 create_file "${BASHRC_CUSTOM_FILE}" ".bashrc_custom" \
 "# Custom bash configuration for: ${NAME}
@@ -231,10 +239,11 @@ generate_devcontainer() {
         return
     fi
 
-    # Build optional resource runArgs
-    local resource_args=""
-    [[ -n "${MEMORY_LIMIT}" ]] && resource_args+=",\n    \"--memory=${MEMORY_LIMIT}\""
-    [[ -n "${CPU_LIMIT}" ]]    && resource_args+=",\n    \"--cpus=${CPU_LIMIT}\""
+    # Build optional resource runArgs (heredocs do not expand \n, so use a
+    # real newline here or the generated JSON ends up malformed)
+    local resource_args="" NL=$'\n'
+    [[ -n "${MEMORY_LIMIT}" ]] && resource_args+=",${NL}    \"--memory=${MEMORY_LIMIT}\""
+    [[ -n "${CPU_LIMIT}" ]]    && resource_args+=",${NL}    \"--cpus=${CPU_LIMIT}\""
 
     # Note: ${localWorkspaceFolder} is a devcontainer variable — must not be expanded by bash.
     cat > "${dc_file}" << DEVCONTAINER
@@ -288,22 +297,22 @@ generate_devcontainer
 # --- Summary -----------------------------------------------------------------
 
 echo ""
-echo -e "${BOLD}  Launch summary${NC}"
-echo -e "  ${DIM}────────────────────────────────────────────────${NC}"
-printf "  %-20s %s\n" "Container name:"  "${CYAN}${CONTAINER_NAME}${NC}"
-printf "  %-20s %s\n" "Image:"           "${CYAN}${IMAGE}${NC}"
-printf "  %-20s %s\n" "Workspaces dir:"  "${CYAN}${WORKSPACES_DIR}${NC}"
-printf "  %-20s %s\n" "SSH directory:"   "${CYAN}${SSH_DIR}${NC}"
-printf "  %-20s %s\n" "Shared dir:"      "${CYAN}${SHARED_DIR} → /opt/shared${NC}"
-printf "  %-20s %s\n" "Memory limit:"    "${CYAN}${MEMORY_LIMIT:-unlimited}${NC}"
-printf "  %-20s %s\n" "CPU limit:"       "${CYAN}${CPU_LIMIT:-unlimited}${NC}"
+echo "${BOLD}  Launch summary${NC}"
+echo "  ${DIM}────────────────────────────────────────────────${NC}"
+printf '  %-20s %s\n' "Container name:"  "${CYAN}${CONTAINER_NAME}${NC}"
+printf '  %-20s %s\n' "Image:"           "${CYAN}${IMAGE}${NC}"
+printf '  %-20s %s\n' "Workspaces dir:"  "${CYAN}${WORKSPACES_DIR}${NC}"
+printf '  %-20s %s\n' "SSH directory:"   "${CYAN}${SSH_DIR}${NC}"
+printf '  %-20s %s\n' "Shared dir:"      "${CYAN}${SHARED_DIR} → /opt/shared${NC}"
+printf '  %-20s %s\n' "Memory limit:"    "${CYAN}${MEMORY_LIMIT:-unlimited}${NC}"
+printf '  %-20s %s\n' "CPU limit:"       "${CYAN}${CPU_LIMIT:-unlimited}${NC}"
 echo ""
 
 # --- Handle existing container -----------------------------------------------
 
 if docker ps -a --format '{{.Names}}' 2>/dev/null | grep -qx "${CONTAINER_NAME}"; then
     warn "Container '${CONTAINER_NAME}' already exists."
-    echo -ne "  Remove and recreate it? [y/N]: "
+    printf '%s' "  Remove and recreate it? [y/N]: "
     read -r _c
     if [[ "${_c}" =~ ^[Yy]$ ]]; then
         step "Removing existing container..."
@@ -318,14 +327,16 @@ fi
 
 # --- Confirm -----------------------------------------------------------------
 
-echo -ne "  ${BOLD}Launch container now?${NC} [Y/n]: "
+printf '%s' "  ${BOLD}Launch container now?${NC} [Y/n]: "
 read -r _c
 
 if [[ "${_c}" =~ ^[Nn]$ ]]; then
     echo ""
     warn "Container not started. Files are ready in ${USER_DIR}"
-    echo -e "\n  ${DIM}Run manually when ready:${NC}\n"
-    echo -e "${DIM}  docker run -d \\
+    echo ""
+    echo "  ${DIM}Run manually when ready:${NC}"
+    echo ""
+    echo "${DIM}  docker run -d \\
     --name ${CONTAINER_NAME} \\
     --hostname ${CONTAINER_NAME} \\
     --restart always \\
@@ -382,9 +393,9 @@ docker "${DOCKER_ARGS[@]}"
 echo ""
 ok "Container '${CONTAINER_NAME}' started successfully!"
 echo ""
-echo -e "  ${DIM}Useful commands:${NC}"
-echo -e "  ${DIM}  ./manage.sh exec ${NAME}        — open shell${NC}"
-echo -e "  ${DIM}  ./manage.sh status ${NAME}      — show status${NC}"
-echo -e "  ${DIM}  ./manage.sh update ${NAME}      — update to latest image${NC}"
-echo -e "  ${DIM}  ./manage.sh list               — list all containers${NC}"
+echo "  ${DIM}Useful commands:${NC}"
+echo "  ${DIM}  ./manage.sh exec ${NAME}        — open shell${NC}"
+echo "  ${DIM}  ./manage.sh status ${NAME}      — show status${NC}"
+echo "  ${DIM}  ./manage.sh update ${NAME}      — update to latest image${NC}"
+echo "  ${DIM}  ./manage.sh list               — list all containers${NC}"
 echo ""

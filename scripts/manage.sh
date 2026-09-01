@@ -18,22 +18,30 @@
 set -euo pipefail
 
 # --- Colors ------------------------------------------------------------------
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-CYAN='\033[0;36m'
-BOLD='\033[1m'
-DIM='\033[2m'
-NC='\033[0m'
+# Colours are enabled only when stdout is a real terminal and the user has not
+# opted out (NO_COLOR, TERM=dumb). $'...' stores the *real* escape bytes, so a
+# plain `echo` / `printf '%s'` renders them: no `echo -e`, no `%b`, and never a
+# colour variable inside a printf format string.
+if [[ -t 1 && -z "${NO_COLOR:-}" && "${TERM:-dumb}" != "dumb" ]]; then
+    RED=$'\033[0;31m'
+    GREEN=$'\033[0;32m'
+    YELLOW=$'\033[1;33m'
+    CYAN=$'\033[0;36m'
+    BOLD=$'\033[1m'
+    DIM=$'\033[2m'
+    NC=$'\033[0m'
+else
+    RED='' GREEN='' YELLOW='' CYAN='' BOLD='' DIM='' NC=''
+fi
 
 LABEL_FILTER="label=devtools.managed=true"
 
 # --- Helpers -----------------------------------------------------------------
 
-ok()   { echo -e "  ${GREEN}✓${NC} $*"; }
-step() { echo -e "  ${CYAN}→${NC} $*"; }
-warn() { echo -e "  ${YELLOW}⚠${NC} $*"; }
-err()  { echo -e "  ${RED}✗${NC} $*" >&2; }
+ok()   { echo "  ${GREEN}✓${NC} $*"; }
+step() { echo "  ${CYAN}→${NC} $*"; }
+warn() { echo "  ${YELLOW}⚠${NC} $*"; }
+err()  { echo "  ${RED}✗${NC} $*" >&2; }
 
 require_name() {
     if [[ -z "${1:-}" ]]; then
@@ -47,7 +55,7 @@ require_container() {
     local container="${name}"
     if ! docker inspect "${container}" &>/dev/null; then
         err "Container '${container}' not found."
-        echo -e "  ${DIM}Run 'manage.sh list' to see all containers.${NC}"
+        echo "  ${DIM}Run 'manage.sh list' to see all containers.${NC}"
         exit 1
     fi
 }
@@ -60,10 +68,10 @@ label() {
 
 status_color() {
     case "$1" in
-        running)   echo -e "${GREEN}$1${NC}" ;;
-        exited)    echo -e "${RED}$1${NC}" ;;
-        paused)    echo -e "${YELLOW}$1${NC}" ;;
-        *)         echo -e "${DIM}$1${NC}" ;;
+        running)   echo "${GREEN}$1${NC}" ;;
+        exited)    echo "${RED}$1${NC}" ;;
+        paused)    echo "${YELLOW}$1${NC}" ;;
+        *)         echo "${DIM}$1${NC}" ;;
     esac
 }
 
@@ -71,21 +79,21 @@ status_color() {
 
 cmd_list() {
     echo ""
-    echo -e "${BOLD}  DevTools Containers${NC}"
-    echo -e "  ${DIM}────────────────────────────────────────────────────────────────${NC}"
+    echo "${BOLD}  DevTools Containers${NC}"
+    echo "  ${DIM}────────────────────────────────────────────────────────────────${NC}"
 
     local containers
     containers=$(docker ps -a --filter "${LABEL_FILTER}" --format "{{.Names}}" 2>/dev/null)
 
     if [[ -z "${containers}" ]]; then
-        echo -e "  ${DIM}No managed devtools containers found.${NC}"
-        echo -e "  ${DIM}Use launch.sh to create one.${NC}"
+        echo "  ${DIM}No managed devtools containers found.${NC}"
+        echo "  ${DIM}Use launch.sh to create one.${NC}"
         echo ""
         return
     fi
 
-    printf "  ${BOLD}%-22s %-12s %-28s %-12s${NC}\n" "CONTAINER" "STATUS" "IMAGE" "CREATED"
-    printf "  ${DIM}%-22s %-12s %-28s %-12s${NC}\n" "──────────────────────" "───────────" "────────────────────────────" "───────────"
+    printf '  %s%-22s %-12s %-34s %-12s%s\n' "${BOLD}" "CONTAINER" "STATUS" "IMAGE" "CREATED" "${NC}"
+    printf '  %s%s %s %s %s%s\n' "${DIM}" "──────────────────────" "────────────" "──────────────────────────────────" "────────────" "${NC}"
 
     while IFS= read -r container; do
         local raw_status image created
@@ -95,11 +103,11 @@ cmd_list() {
 
         printf "  %-22s " "${container}"
         case "${raw_status}" in
-            running) printf "${GREEN}%-12s${NC}" "${raw_status}" ;;
-            exited)  printf "${RED}%-12s${NC}"   "${raw_status}" ;;
-            *)       printf "${DIM}%-12s${NC}"   "${raw_status}" ;;
+            running) printf '%s%-12s%s' "${GREEN}" "${raw_status}" "${NC}" ;;
+            exited)  printf '%s%-12s%s' "${RED}"   "${raw_status}" "${NC}" ;;
+            *)       printf '%s%-12s%s' "${DIM}"   "${raw_status}" "${NC}" ;;
         esac
-        printf "%-28s %s\n" "${image}" "${created}"
+        printf '%-34s %s\n' "${image}" "${created}"
     done <<< "${containers}"
 
     echo ""
@@ -121,8 +129,8 @@ cmd_status() {
     created=$(docker inspect --format '{{.Created}}' "${container}" | cut -c1-19 | tr 'T' ' ')
 
     echo ""
-    echo -e "${BOLD}  Container: ${CYAN}${container}${NC}"
-    echo -e "  ${DIM}────────────────────────────────────────────────${NC}"
+    echo "${BOLD}  Container: ${CYAN}${container}${NC}"
+    echo "  ${DIM}────────────────────────────────────────────────${NC}"
     printf "  %-18s %s\n" "Status:"         "$(status_color "${raw_status}")"
     printf "  %-18s %s\n" "Image:"          "${image}"
     printf "  %-18s %s\n" "Created:"        "${created}"
@@ -134,7 +142,7 @@ cmd_status() {
 
     if [[ "${raw_status}" == "running" ]]; then
         echo ""
-        echo -e "  ${DIM}Resource usage:${NC}"
+        echo "  ${DIM}Resource usage:${NC}"
         docker stats --no-stream --format "  CPU: {{.CPUPerc}}   MEM: {{.MemUsage}}" "${container}" 2>/dev/null || true
     fi
     echo ""
@@ -173,10 +181,10 @@ cmd_remove() {
     require_container "${name}"
 
     warn "This will remove container '${container}'. Workspace files are kept."
-    echo -ne "  Confirm? [y/N]: "
+    printf '%s' "  Confirm? [y/N]: "
     read -r confirm
     if [[ ! "${confirm}" =~ ^[Yy]$ ]]; then
-        echo -e "  ${DIM}Aborted.${NC}"
+        echo "  ${DIM}Aborted.${NC}"
         return
     fi
 
@@ -188,7 +196,7 @@ cmd_remove() {
     ok "Removed container '${container}'"
 
     if [[ -n "${volume}" ]] && docker volume inspect "${volume}" &>/dev/null; then
-        echo -ne "  Also remove data volume '${volume}'? [y/N]: "
+        printf '%s' "  Also remove data volume '${volume}'? [y/N]: "
         read -r _cv
         if [[ "${_cv}" =~ ^[Yy]$ ]]; then
             docker volume rm "${volume}" > /dev/null
@@ -212,6 +220,9 @@ cmd_update() {
     memory_limit=$(label "${container}" "devtools.memory")
     cpu_limit=$(label "${container}" "devtools.cpus")
     volume=$(label "${container}" "devtools.volume")
+    # Containers created before the volume label existed fall back to the
+    # name launch.sh would have used.
+    volume="${volume:-${name}-private}"
 
     # Re-derive paths
     local shared_dir user_dir env_file gitconfig bashrc_custom bashrc_common
@@ -245,6 +256,7 @@ cmd_update() {
         --label "devtools.image=${image}"
         --label "devtools.memory=${memory_limit}"
         --label "devtools.cpus=${cpu_limit}"
+        --label "devtools.volume=${volume}"
     )
     [[ -n "${memory_limit}" ]] && docker_args+=(--memory="${memory_limit}")
     [[ -n "${cpu_limit}" ]]    && docker_args+=(--cpus="${cpu_limit}")
@@ -283,24 +295,24 @@ cmd_exec() {
 
 usage() {
     echo ""
-    echo -e "${BOLD}Usage:${NC} manage.sh <command> [name]"
+    echo "${BOLD}Usage:${NC} manage.sh <command> [name]"
     echo ""
-    echo -e "${BOLD}Commands:${NC}"
-    echo -e "  ${CYAN}list${NC}              List all managed devtools containers"
-    echo -e "  ${CYAN}status${NC}  <name>    Show detailed status and resource usage"
-    echo -e "  ${CYAN}start${NC}   <name>    Start a stopped container"
-    echo -e "  ${CYAN}stop${NC}    <name>    Stop a running container"
-    echo -e "  ${CYAN}restart${NC} <name>    Restart a container"
-    echo -e "  ${CYAN}remove${NC}  <name>    Remove a container (workspace files are kept)"
-    echo -e "  ${CYAN}update${NC}  <name>    Pull the latest image and recreate the container"
-    echo -e "  ${CYAN}logs${NC}    <name>    Follow container logs (Ctrl+C to exit)"
-    echo -e "  ${CYAN}exec${NC}    <name>    Open an interactive bash session"
+    echo "${BOLD}Commands:${NC}"
+    echo "  ${CYAN}list${NC}              List all managed devtools containers"
+    echo "  ${CYAN}status${NC}  <name>    Show detailed status and resource usage"
+    echo "  ${CYAN}start${NC}   <name>    Start a stopped container"
+    echo "  ${CYAN}stop${NC}    <name>    Stop a running container"
+    echo "  ${CYAN}restart${NC} <name>    Restart a container"
+    echo "  ${CYAN}remove${NC}  <name>    Remove a container (workspace files are kept)"
+    echo "  ${CYAN}update${NC}  <name>    Pull the latest image and recreate the container"
+    echo "  ${CYAN}logs${NC}    <name>    Follow container logs (Ctrl+C to exit)"
+    echo "  ${CYAN}exec${NC}    <name>    Open an interactive bash session"
     echo ""
-    echo -e "${BOLD}Examples:${NC}"
-    echo -e "  manage.sh list"
-    echo -e "  manage.sh status alice"
-    echo -e "  manage.sh update alice"
-    echo -e "  manage.sh exec alice"
+    echo "${BOLD}Examples:${NC}"
+    echo "  manage.sh list"
+    echo "  manage.sh status alice"
+    echo "  manage.sh update alice"
+    echo "  manage.sh exec alice"
     echo ""
 }
 
